@@ -1,4 +1,4 @@
-package main
+package rpc
 
 import (
 	"context"
@@ -20,7 +20,7 @@ func RpcHealthcheck(
 	payload string,
 ) (string, error) {
 
-	logger.Debug("Healthcheck RPC called")
+	logger.Debug("Healthcheck RPC called!!")
 	var response *HealthcheckResponse = &HealthcheckResponse{Success: true}
 
 	var (

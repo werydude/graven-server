@@ -1,3 +1,4 @@
 wsl sudo go build --trimpath --buildmode=plugin -o ./modules/backend.so
 
-docker -D compose --progress=plain up
+docker -D compose --progress=plain up -d
+docker -D compose --progress=plain restart

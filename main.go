@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"time"
 
+	rpc "github.com/werydude/graven-server/internal/rpc"
+
 	"github.com/heroiclabs/nakama-common/runtime"
 )
 
@@ -17,7 +19,8 @@ func InitModule(
 ) error {
 	var initStart time.Time = time.Now()
 
-	var err error = initializer.RegisterRpc("healthcheck", RpcHealthcheck)
+	//go:generate echo "Building RPC: Health Check"
+	var err error = initializer.RegisterRpc("healthcheck", rpc.RpcHealthcheck)
 	if err != nil {
 		return err
 	}
