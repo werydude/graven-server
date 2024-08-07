@@ -1,0 +1,12 @@
+{"level":"warn","ts":"2024-08-07T05:13:29.524Z","caller":"server/config.go:331","msg":"WARNING: insecure default parameter value, change this for production!","param":"console.signing_key"}
+{"level":"warn","ts":"2024-08-07T05:13:29.524Z","caller":"server/config.go:339","msg":"WARNING: insecure default parameter value, change this for production!","param":"session.encryption_key"}
+{"level":"warn","ts":"2024-08-07T05:13:29.524Z","caller":"server/config.go:343","msg":"WARNING: insecure default parameter value, change this for production!","param":"session.refresh_encryption_key"}
+{"level":"warn","ts":"2024-08-07T05:13:29.525Z","caller":"server/config.go:347","msg":"WARNING: insecure default parameter value, change this for production!","param":"runtime.http_key"}
+{"level":"warn","ts":"2024-08-07T17:17:51.023Z","caller":"server/config.go:331","msg":"WARNING: insecure default parameter value, change this for production!","param":"console.signing_key"}
+{"level":"warn","ts":"2024-08-07T17:17:51.023Z","caller":"server/config.go:339","msg":"WARNING: insecure default parameter value, change this for production!","param":"session.encryption_key"}
+{"level":"warn","ts":"2024-08-07T17:17:51.023Z","caller":"server/config.go:343","msg":"WARNING: insecure default parameter value, change this for production!","param":"session.refresh_encryption_key"}
+{"level":"warn","ts":"2024-08-07T17:17:51.023Z","caller":"server/config.go:347","msg":"WARNING: insecure default parameter value, change this for production!","param":"runtime.http_key"}
+{"level":"warn","ts":"2024-08-07T17:18:05.753Z","caller":"server/config.go:331","msg":"WARNING: insecure default parameter value, change this for production!","param":"console.signing_key"}
+{"level":"warn","ts":"2024-08-07T17:18:05.753Z","caller":"server/config.go:339","msg":"WARNING: insecure default parameter value, change this for production!","param":"session.encryption_key"}
+{"level":"warn","ts":"2024-08-07T17:18:05.753Z","caller":"server/config.go:343","msg":"WARNING: insecure default parameter value, change this for production!","param":"session.refresh_encryption_key"}
+{"level":"warn","ts":"2024-08-07T17:18:05.753Z","caller":"server/config.go:347","msg":"WARNING: insecure default parameter value, change this for production!","param":"runtime.http_key"}

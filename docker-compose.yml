@@ -33,7 +33,7 @@ services:
       prometheus:
         condition: service_started
     volumes:
-      - /c/Users/tahv/Code/Golang/Projects/graven-server:/nakama/data
+      - ./:/nakama/data 
     expose:
       - "7349"
       - "7350"
