@@ -9,7 +9,7 @@ import (
 )
 
 type ParamPayload struct {
-	Params map[string]interface{}
+	Params map[string]interface{} `json:"params"`
 }
 
 func RpcCreateStandardMatch(
