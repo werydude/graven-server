@@ -3,19 +3,28 @@ package match
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strconv"
 
 	"github.com/heroiclabs/nakama-common/runtime"
 	cards "github.com/werydude/graven-server/internal/cards"
+	"golang.org/x/exp/maps"
 )
 
 const DECK_SIZE uint8 = 32
 const MAX_PLAYERS uint8 = 2
 
+const (
+	OpConnected = 1 << iota
+	OpReady
+	OpPlaying
+)
+
 type PlayerState struct {
 	Presence runtime.Presence
 	Data     FieldData
+	State    uint8
 }
 
 type FieldData struct {
@@ -43,6 +52,7 @@ func NewPlayerState(p_presence runtime.Presence, p_deckcode string, logger runti
 			make([]string, DECK_SIZE),
 			make([]string, DECK_SIZE),
 		},
+		OpConnected,
 	}
 
 }
@@ -63,8 +73,7 @@ func (m *Match) MatchInit(ctx context.Context, logger runtime.Logger, db *sql.DB
 	}
 
 	tickRate := 1
-	label := ""
-
+	var label string = fmt.Sprintf("%s", params["label"])
 	return state, tickRate, label
 }
 
@@ -116,16 +125,72 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 
 	for _, player := range mState.Players {
 		presence := player.Presence
-		logger.Info("Presence %v named %v", presence.GetUserId(), presence.GetUsername())
+		if false {
+			logger.Info("Presence %v named %v", presence.GetUserId(), presence.GetUsername())
+		}
 	}
 
 	for _, message := range messages {
-		logger.Info("Received %v from %v", string(message.GetData()), message.GetUserId())
-		reliable := true
-		dispatcher.BroadcastMessage(1, message.GetData(), []runtime.Presence{message}, nil, reliable)
+		logger.Info("Received %v from %v (OpCode: %v, need: %v)", string(message.GetData()), message.GetUserId(), message.GetOpCode(), OpReady)
+		switch message.GetOpCode() {
+		case OpReady:
+			ready, newState := CheckReady(mState, &message, logger)
+			logger.Warn("%+v", newState)
+			logger.Warn(fmt.Sprintf("%t", ready))
+			if ready {
+
+				keys := keysAsBtyes(mState.Players, logger)
+				logger.Warn(string(keys))
+				if len(keys) > 0 {
+					dispatcher.BroadcastMessage(OpPlaying, keys, nil, nil, true)
+				}
+			}
+		}
+	}
+	return mState
+}
+
+func CheckReady(mState *MatchState, message_ptr *runtime.MatchData, logger runtime.Logger) (bool, *MatchState) {
+	message := *message_ptr
+	player := mState.Players[message.GetUserId()]
+	logger.Warn("Message Data: %b | int: %d | cmp: %t", message.GetData(), message.GetData()[0], message.GetData()[0] == 1)
+	if message.GetData()[0] == 1 {
+
+		player.State = OpReady
+	} else {
+		player.State = OpConnected
+	}
+	mState.Players[message.GetUserId()] = player // We love ambigous copies! \s :))))))
+	logger.Warn("State: %d", player.State)
+	logger.Warn("mState: %d", mState.Players[message.GetUserId()].State)
+	if len(mState.Players) != int(MAX_PLAYERS) {
+		logger.Warn("Failed Count")
+		return false, mState
+	}
+	logger.Warn("Passed count")
+	logger.Warn("Players: %+v", mState.Players)
+	for _, player := range mState.Players {
+		if player.State != OpReady {
+			logger.Warn("Failed ready")
+			return false, mState
+		}
+	}
+	logger.Warn("success!")
+	return true, mState
+}
+
+func keysAsBtyes(playerStates map[string]PlayerState, logger runtime.Logger) []byte {
+	players := make(map[string]string, len(maps.Keys(playerStates)))
+	for id, state := range playerStates {
+		players[id] = state.Presence.GetUsername()
 	}
 
-	return mState
+	out, err := json.Marshal(players)
+	if err != nil {
+		logger.Error("Error marshalling response type to JSON: %v", err)
+		return make([]byte, 0)
+	}
+	return out
 }
 
 func (m *Match) MatchTerminate(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, graceSeconds int) interface{} {

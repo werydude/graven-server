@@ -42,7 +42,7 @@ func DecodeDeckCode(deck_code string, logger runtime.Logger) ([]string, DeckDeco
 			if card_string == "" {
 				continue
 			}
-			logger.Warn(card_string)
+			//logger.Warn(card_string)
 			for n := range CARD_LIMIT {
 				cards = append(cards, card_string)
 				if n+1 >= card_amt || len(cards) >= DECK_SIZE {

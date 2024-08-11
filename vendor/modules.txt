@@ -3,6 +3,9 @@
 github.com/heroiclabs/nakama-common/api
 github.com/heroiclabs/nakama-common/rtapi
 github.com/heroiclabs/nakama-common/runtime
+# golang.org/x/exp v0.0.0-20240808152545-0cdaa3abc0fa
+## explicit; go 1.20
+golang.org/x/exp/maps
 # google.golang.org/protobuf v1.34.1
 ## explicit; go 1.17
 google.golang.org/protobuf/encoding/prototext

@@ -3,7 +3,7 @@ data_dir: "./data/"
 
 logger:
     stdout: true
-    level: "warn"
+    level: "info"
     file: "/nakama/data/logfile.log"
 
 console:
