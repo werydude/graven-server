@@ -20,9 +20,9 @@ func (e *DeckDecodeError) Error() string {
 	return fmt.Sprintf("%s - %s", e.Err, e.Message)
 }
 
-func DecodeDeckCode(deck_code string, logger runtime.Logger) ([]string, DeckDecodeError) {
+func DecodeDeckCode(deck_code string, logger runtime.Logger) ([]Card, DeckDecodeError) {
 
-	cards := make([]string, DECK_SIZE)[:0] // Set capacity=DECK_SIZE and length=0
+	cards := make([]Card, DECK_SIZE)[:0] // Set capacity=DECK_SIZE and length=0
 
 	sDec, err := b64.StdEncoding.DecodeString(deck_code)
 	if err != nil {
@@ -44,7 +44,7 @@ func DecodeDeckCode(deck_code string, logger runtime.Logger) ([]string, DeckDeco
 			}
 			//logger.Warn(card_string)
 			for n := range CARD_LIMIT {
-				cards = append(cards, card_string)
+				cards = append(cards, Card(card_string))
 				if n+1 >= card_amt || len(cards) >= DECK_SIZE {
 					break
 				}
