@@ -15,7 +15,22 @@ const (
 	Ready     OpCode = 1 << iota
 	Playing
 	Draw
+	Move
 )
+
+func DecodeOpCode(mState *MatchState, logger *runtime.Logger, dispatcher *runtime.MatchDispatcher, message runtime.MatchData) *MatchState {
+	(*logger).Info("Received %v from %v (OpCode: %v, need: %v)", string(message.GetData()), message.GetUserId(), message.GetOpCode(), Ready)
+	switch OpCode(message.GetOpCode()) {
+	case Ready:
+		OnReady(mState, &message, logger, dispatcher)
+	case Draw:
+		mState = OnDraw(mState, &message, logger, dispatcher, message.GetData())
+	case Move:
+		(*logger).Warn("Running OnMove")
+		mState = OnMove(mState, &message, logger, dispatcher, message.GetData())
+	}
+	return mState
+}
 
 func CheckReady(mState *MatchState, message_ptr *runtime.MatchData, logger *runtime.Logger) (bool, *MatchState) {
 	message := *message_ptr
@@ -78,19 +93,11 @@ func keysAsBtyes(playerStates map[string]PlayerState, logger *runtime.Logger) []
 	return out
 }
 
-type DrawnCard struct {
-	CardId Card   `json:"CardID"`
-	NodeId []byte `json:"NodeID"`
-}
-
 func OnDraw(mState *MatchState, message_ptr *runtime.MatchData, logger *runtime.Logger, dispatcher *runtime.MatchDispatcher, data []byte) *MatchState {
 	message := *message_ptr
 	player := mState.Players[message.GetUserId()]
-	drawn := DrawnCard{
-		player.Data.DrawCard(),
-		data,
-	}
-
+	drawn := player.Data.DrawCard(&data)
+	(*logger).Warn("%+v", player)
 	mState.Players[message.GetUserId()] = player
 
 	if enc_data, err := json.Marshal(drawn); err == nil {
@@ -98,6 +105,29 @@ func OnDraw(mState *MatchState, message_ptr *runtime.MatchData, logger *runtime.
 		(*logger).Warn("BROADCASTED!")
 	} else {
 		(*logger).Error("%s", err)
+	}
+	return mState
+
+}
+
+func OnMove(mState *MatchState, message_ptr *runtime.MatchData, logger *runtime.Logger, dispatcher *runtime.MatchDispatcher, data []byte) *MatchState {
+	message := *message_ptr
+	player := mState.Players[message.GetUserId()]
+
+	var cmd MoveCommand
+	err := json.Unmarshal(data, &cmd)
+	if err != nil {
+		(*logger).Warn("Failed to unmashal; %s (%s)->(%+v)", err, data, cmd)
+	}
+
+	new_data, err := cmd.run(&player.Data, logger)
+	if err != nil {
+		(*logger).Warn("Failed command: %s", err)
+	} else {
+		player.Data = *new_data
+		mState.Players[message.GetUserId()] = player
+
+		(*dispatcher).BroadcastMessage(int64(Move), data, nil, player.Presence, true)
 	}
 	return mState
 

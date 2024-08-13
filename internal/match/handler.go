@@ -7,13 +7,11 @@ import (
 	"strconv"
 
 	"github.com/heroiclabs/nakama-common/runtime"
-	cards "github.com/werydude/graven-server/internal/cards"
+	"github.com/werydude/graven-server/internal/cards"
 )
 
 const DECK_SIZE uint8 = 32
 const MAX_PLAYERS uint8 = 2
-
-type Card = cards.Card
 
 type PlayerState struct {
 	Presence runtime.Presence
@@ -22,21 +20,32 @@ type PlayerState struct {
 }
 
 func NewPlayerState(p_presence runtime.Presence, p_deckcode string, logger runtime.Logger) PlayerState {
-	var deck []Card
+	var deck Zone
 	decoded_deck, dde := cards.DecodeDeckCode(p_deckcode, logger)
 	if dde.Err != nil || dde.Err == nil {
 		deck = append(deck, decoded_deck...)
 	} else {
 		logger.Warn("%s", dde)
 	}
+
+	grave := make([]cards.InstanceCard, DECK_SIZE)
+	hand := make([]cards.InstanceCard, DECK_SIZE)
+	survey := make([]cards.InstanceCard, DECK_SIZE)
+	effect := make([]cards.InstanceCard, DECK_SIZE)
+
+	grave = grave[:0]
+	hand = hand[:0]
+	survey = survey[:0]
+	effect = effect[:0]
+
 	return PlayerState{
 		p_presence,
 		FieldData{
 			deck,
-			make([]Card, DECK_SIZE),
-			make([]Card, DECK_SIZE),
-			make([]Card, DECK_SIZE),
-			make([]Card, DECK_SIZE),
+			grave,
+			hand,
+			survey,
+			effect,
 		},
 		Connected,
 	}
@@ -75,7 +84,7 @@ func (m *Match) MatchJoinAttempt(ctx context.Context, logger runtime.Logger, db 
 	}
 	mState.Players[presence.GetUserId()] = NewPlayerState(presence, deck_code, logger)
 	logger.Warn("%s", mState.Players[presence.GetUserId()].Data.Deck)
-	return state, true, fmt.Sprintf("%s", mState.Players[presence.GetUserId()].Data.Deck)
+	return state, true, fmt.Sprintf("%+v", mState.Players[presence.GetUserId()].Data.Deck)
 }
 
 func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, presences []runtime.Presence) interface{} {
@@ -117,13 +126,7 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	}
 
 	for _, message := range messages {
-		logger.Info("Received %v from %v (OpCode: %v, need: %v)", string(message.GetData()), message.GetUserId(), message.GetOpCode(), Ready)
-		switch OpCode(message.GetOpCode()) {
-		case Ready:
-			OnReady(mState, &message, &logger, &dispatcher)
-		case Draw:
-			mState = OnDraw(mState, &message, &logger, &dispatcher, message.GetData())
-		}
+		mState = DecodeOpCode(mState, &logger, &dispatcher, message)
 	}
 	return mState
 }
