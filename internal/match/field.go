@@ -26,9 +26,10 @@ type FieldData struct {
 	Effect Zone `json:"effect"`
 }
 
-func (field *FieldData) DrawCard() cards.InstanceCard {
+func (field *FieldData) DrawCard(tag ZoneTag) cards.InstanceCard {
 	var drawn cards.InstanceCard
-	field.Deck, field.Hand, drawn = PopMove[cards.InstanceCard](field.Deck, field.Hand, 0)
+	new_zone := field.ZoneFromTag(tag)
+	field.Deck, *new_zone, drawn = PopMove[cards.InstanceCard](field.Deck, *new_zone, 0)
 	return drawn
 }
 

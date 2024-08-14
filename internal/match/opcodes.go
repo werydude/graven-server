@@ -100,11 +100,19 @@ func keysAsBtyes(playerStates map[string]PlayerState, logger *runtime.Logger) []
 func OnDraw(mState *MatchState, message_ptr *runtime.MatchData, logger *runtime.Logger, dispatcher *runtime.MatchDispatcher, data []byte) *MatchState {
 	message := *message_ptr
 	player := mState.Players[message.GetUserId()]
-	drawn := player.Data.DrawCard()
+
+	var cmd MoveCommand
+	err := json.Unmarshal(data, &cmd)
+	if err != nil {
+		(*logger).Warn("Failed to unmashal; %s (%s)->(%+v)", err, data, cmd)
+	} else {
+		(*logger).Warn("unmarshal Success! %+v", cmd)
+	}
+	drawn := player.Data.DrawCard(cmd.TagB)
 	(*logger).Warn("%+v", player)
 	mState.Players[message.GetUserId()] = player
-
-	if enc_data, err := json.Marshal(drawn); err == nil {
+	cmd.Card = drawn
+	if enc_data, err := json.Marshal(cmd); err == nil {
 		(*dispatcher).BroadcastMessage(int64(Draw), enc_data, nil, player.Presence, true)
 		(*logger).Warn("BROADCASTED!")
 	} else {
