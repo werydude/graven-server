@@ -19,9 +19,9 @@ type PlayerState struct {
 	State    OpCode
 }
 
-func NewPlayerState(p_presence runtime.Presence, p_deckcode string, logger runtime.Logger) PlayerState {
+func NewPlayerState(p_presence runtime.Presence, p_deckcode string, p_instances *string, logger runtime.Logger) PlayerState {
 	var deck Zone
-	decoded_deck, dde := cards.DecodeDeckCode(p_deckcode, logger)
+	decoded_deck, dde := cards.DecodeDeckCode(p_deckcode, p_instances, logger)
 	if dde.Err != nil || dde.Err == nil {
 		deck = append(deck, decoded_deck...)
 	} else {
@@ -77,7 +77,11 @@ func (m *Match) MatchJoinAttempt(ctx context.Context, logger runtime.Logger, db 
 	if val, exists := metadata["deck_code"]; exists {
 		deck_code = val
 	}
-	mState.Players[presence.GetUserId()] = NewPlayerState(presence, deck_code, logger)
+	instances := ""
+	if ival, exists := metadata["instances"]; exists {
+		instances = ival
+	}
+	mState.Players[presence.GetUserId()] = NewPlayerState(presence, deck_code, &instances, logger)
 	logger.Warn("%s", mState.Players[presence.GetUserId()].Data.Deck)
 	return state, true, fmt.Sprintf("%+v", mState.Players[presence.GetUserId()].Data.Deck)
 }
@@ -90,7 +94,7 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 		if exists {
 			continue
 		}
-		mState.Players[p.GetUserId()] = NewPlayerState(p, "", logger)
+		mState.Players[p.GetUserId()] = NewPlayerState(p, "", nil, logger)
 	}
 
 	return mState

@@ -1,7 +1,6 @@
 package match
 
 import (
-	"encoding/json"
 	"errors"
 
 	"github.com/heroiclabs/nakama-common/runtime"
@@ -27,13 +26,9 @@ type FieldData struct {
 	Effect Zone `json:"effect"`
 }
 
-func (field *FieldData) DrawCard(instance_id_ptr *[]byte) cards.InstanceCard {
+func (field *FieldData) DrawCard() cards.InstanceCard {
 	var drawn cards.InstanceCard
 	field.Deck, field.Hand, drawn = PopMove[cards.InstanceCard](field.Deck, field.Hand, 0)
-	if instance_id_ptr != nil {
-		json.Unmarshal(*instance_id_ptr, &(drawn.NodeId))
-		field.Hand[len(field.Hand)-1] = drawn
-	}
 	return drawn
 }
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/heroiclabs/nakama-common/runtime"
+	"github.com/werydude/graven-server/internal/cards"
 	"golang.org/x/exp/maps"
 )
 
@@ -16,6 +17,7 @@ const (
 	Playing
 	Draw
 	Move
+	GetDeck
 )
 
 func DecodeOpCode(mState *MatchState, logger *runtime.Logger, dispatcher *runtime.MatchDispatcher, message runtime.MatchData) *MatchState {
@@ -28,6 +30,8 @@ func DecodeOpCode(mState *MatchState, logger *runtime.Logger, dispatcher *runtim
 	case Move:
 		(*logger).Warn("Running OnMove")
 		mState = OnMove(mState, &message, logger, dispatcher, message.GetData())
+	case GetDeck:
+		mState = OnGetDeck(mState, &message, logger, dispatcher, message.GetData())
 	}
 	return mState
 }
@@ -96,7 +100,7 @@ func keysAsBtyes(playerStates map[string]PlayerState, logger *runtime.Logger) []
 func OnDraw(mState *MatchState, message_ptr *runtime.MatchData, logger *runtime.Logger, dispatcher *runtime.MatchDispatcher, data []byte) *MatchState {
 	message := *message_ptr
 	player := mState.Players[message.GetUserId()]
-	drawn := player.Data.DrawCard(&data)
+	drawn := player.Data.DrawCard()
 	(*logger).Warn("%+v", player)
 	mState.Players[message.GetUserId()] = player
 
@@ -128,6 +132,21 @@ func OnMove(mState *MatchState, message_ptr *runtime.MatchData, logger *runtime.
 		mState.Players[message.GetUserId()] = player
 
 		(*dispatcher).BroadcastMessage(int64(Move), data, nil, player.Presence, true)
+	}
+	return mState
+
+}
+
+func OnGetDeck(mState *MatchState, message_ptr *runtime.MatchData, logger *runtime.Logger, dispatcher *runtime.MatchDispatcher, data []byte) *MatchState {
+	message := *message_ptr
+	player := mState.Players[message.GetUserId()]
+
+	deck_code, err := cards.EncodeDeckCode(player.Data.Deck, *logger)
+
+	if err.Err != nil {
+		(*logger).Warn("Failed encode: %s", err)
+	} else {
+		(*dispatcher).BroadcastMessage(int64(GetDeck), deck_code, []runtime.Presence{player.Presence}, player.Presence, true)
 	}
 	return mState
 

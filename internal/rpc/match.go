@@ -59,3 +59,10 @@ func RpcTerminateMatch(
 
 	return matchID, err
 }
+
+type MatchReadyState struct {
+	MatchID    string
+	ReadyState bool
+}
+
+func RpcReadyMatch() {}
