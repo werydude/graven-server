@@ -28,15 +28,10 @@ func NewPlayerState(p_presence runtime.Presence, p_deckcode string, logger runti
 		logger.Warn("%s", dde)
 	}
 
-	grave := make([]cards.InstanceCard, DECK_SIZE)
-	hand := make([]cards.InstanceCard, DECK_SIZE)
-	survey := make([]cards.InstanceCard, DECK_SIZE)
-	effect := make([]cards.InstanceCard, DECK_SIZE)
-
-	grave = grave[:0]
-	hand = hand[:0]
-	survey = survey[:0]
-	effect = effect[:0]
+	grave := make([]cards.InstanceCard, 0, DECK_SIZE)
+	hand := make([]cards.InstanceCard, 0, DECK_SIZE)
+	survey := make([]cards.InstanceCard, 0, DECK_SIZE)
+	effect := make([]cards.InstanceCard, 0, DECK_SIZE)
 
 	return PlayerState{
 		p_presence,
