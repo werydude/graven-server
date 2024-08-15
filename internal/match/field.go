@@ -47,6 +47,7 @@ func (field *FieldData) MoveZone(tagA ZoneTag, tagB ZoneTag, card cards.Instance
 		(*logger).Warn("TAG A: %+v \n TAG B: %+v", tagA, tagB)
 	}
 	var err error
+
 	*zoneA_ptr, *zoneB_ptr, err = MoveItem(*zoneA_ptr, *zoneB_ptr, card, logger)
 	return field, err
 }
@@ -79,21 +80,15 @@ func (cmd MoveCommand) run(field *FieldData, logger *runtime.Logger) (*FieldData
 
 func MoveItem(zoneA []cards.InstanceCard, zoneB []cards.InstanceCard, item cards.InstanceCard, logger *runtime.Logger) ([]cards.InstanceCard, []cards.InstanceCard, error) {
 	var node_idx int = -1
-	var card_idx int = -1
 	if logger != nil {
 		(*logger).Warn("ZONE A: %+v", zoneA)
 	}
 	for i, c := range zoneA {
 		if c.NodeId == item.NodeId {
 			node_idx = i
+			(*logger).Warn("Found in A!")
 			break
 		}
-		if c.CardId == item.CardId {
-			card_idx = i
-		}
-	}
-	if card_idx > 0 && node_idx == -1 {
-		node_idx = card_idx
 	}
 	if node_idx < 0 {
 		return zoneA, zoneB, errors.New("item not found")

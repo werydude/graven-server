@@ -149,7 +149,6 @@ func OnMove(mState *MatchState, message_ptr *runtime.MatchData, logger *runtime.
 	} else {
 		player.Data = *new_data
 		mState.Players[message.GetUserId()] = player
-
 		game_data := DeckCounter{
 			cmd, len(player.Data.Deck),
 		}
