@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/heroiclabs/nakama-common/runtime"
-	"github.com/werydude/graven-server/internal/cards"
 	"golang.org/x/exp/maps"
 )
 
@@ -17,7 +16,7 @@ const (
 	Playing
 	Draw
 	Move
-	GetDeck
+	EndMatch
 )
 
 func DecodeOpCode(mState *MatchState, logger *runtime.Logger, dispatcher *runtime.MatchDispatcher, message runtime.MatchData) *MatchState {
@@ -26,14 +25,22 @@ func DecodeOpCode(mState *MatchState, logger *runtime.Logger, dispatcher *runtim
 	case Ready:
 		OnReady(mState, &message, logger, dispatcher)
 	case Draw:
+
 		mState = OnDraw(mState, &message, logger, dispatcher, message.GetData())
+
+		if CheckDeck(mState, message.GetUserId()) {
+			loser := message.GetUserId()
+			mState.Loser = &(loser)
+		}
 	case Move:
 		(*logger).Warn("Running OnMove")
 		mState = OnMove(mState, &message, logger, dispatcher, message.GetData())
-	case GetDeck:
-		mState = OnGetDeck(mState, &message, logger, dispatcher, message.GetData())
 	}
 	return mState
+}
+
+func CheckDeck(mState *MatchState, user_id string) bool {
+	return len(mState.Players[user_id].Data.Deck) == 0
 }
 
 func CheckReady(mState *MatchState, message_ptr *runtime.MatchData, logger *runtime.Logger) (bool, *MatchState) {
@@ -112,9 +119,13 @@ func OnDraw(mState *MatchState, message_ptr *runtime.MatchData, logger *runtime.
 	(*logger).Warn("%+v", player)
 	mState.Players[message.GetUserId()] = player
 	cmd.Card = drawn
-	if enc_data, err := json.Marshal(cmd); err == nil {
+
+	game_data := DeckCounter{
+		cmd, len(player.Data.Deck),
+	}
+	if enc_data, err := json.Marshal(game_data); err == nil {
 		(*dispatcher).BroadcastMessage(int64(Draw), enc_data, nil, player.Presence, true)
-		(*logger).Warn("BROADCASTED!")
+		(*logger).Warn("broadcasted!")
 	} else {
 		(*logger).Error("%s", err)
 	}
@@ -139,22 +150,15 @@ func OnMove(mState *MatchState, message_ptr *runtime.MatchData, logger *runtime.
 		player.Data = *new_data
 		mState.Players[message.GetUserId()] = player
 
-		(*dispatcher).BroadcastMessage(int64(Move), data, nil, player.Presence, true)
-	}
-	return mState
-
-}
-
-func OnGetDeck(mState *MatchState, message_ptr *runtime.MatchData, logger *runtime.Logger, dispatcher *runtime.MatchDispatcher, data []byte) *MatchState {
-	message := *message_ptr
-	player := mState.Players[message.GetUserId()]
-
-	deck_code, err := cards.EncodeDeckCode(player.Data.Deck, *logger)
-
-	if err.Err != nil {
-		(*logger).Warn("Failed encode: %s", err)
-	} else {
-		(*dispatcher).BroadcastMessage(int64(GetDeck), deck_code, []runtime.Presence{player.Presence}, player.Presence, true)
+		game_data := DeckCounter{
+			cmd, len(player.Data.Deck),
+		}
+		if enc_data, err := json.Marshal(game_data); err == nil {
+			(*dispatcher).BroadcastMessage(int64(Move), enc_data, nil, player.Presence, true)
+			(*logger).Warn("broadcasted!")
+		} else {
+			(*logger).Error("%s", err)
+		}
 	}
 	return mState
 

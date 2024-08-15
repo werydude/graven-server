@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"strconv"
 
 	"github.com/heroiclabs/nakama-common/runtime"
 	"github.com/werydude/graven-server/internal/cards"
@@ -19,14 +18,8 @@ type PlayerState struct {
 	State    OpCode
 }
 
-func NewPlayerState(p_presence runtime.Presence, p_deckcode string, p_instances *string, logger runtime.Logger) PlayerState {
-	var deck Zone
-	decoded_deck, dde := cards.DecodeDeckCode(p_deckcode, p_instances, logger)
-	if dde.Err != nil || dde.Err == nil {
-		deck = append(deck, decoded_deck...)
-	} else {
-		logger.Warn("%s", dde)
-	}
+func NewPlayerState(p_presence runtime.Presence, p_instances string, logger runtime.Logger) PlayerState {
+	deck := cards.DecodeInstances(p_instances, logger)
 
 	grave := make([]cards.InstanceCard, 0, DECK_SIZE)
 	hand := make([]cards.InstanceCard, 0, DECK_SIZE)
@@ -47,8 +40,14 @@ func NewPlayerState(p_presence runtime.Presence, p_deckcode string, p_instances 
 
 }
 
+type DeckCounter struct {
+	Data      interface{} `json:"data"`
+	DeckCount int         `json:"deck_count"`
+}
+
 type MatchState struct {
 	Players map[string]PlayerState `json:"players"`
+	Loser   *string
 }
 
 type Match struct{}
@@ -62,7 +61,7 @@ func (m *Match) MatchInit(ctx context.Context, logger runtime.Logger, db *sql.DB
 		Players: make(map[string]PlayerState),
 	}
 
-	tickRate := 1
+	tickRate := 30
 	var label string = fmt.Sprintf("%s", params["label"])
 	return state, tickRate, label
 }
@@ -73,15 +72,11 @@ func (m *Match) MatchJoinAttempt(ctx context.Context, logger runtime.Logger, db 
 	if len(mState.Players) >= 2 {
 		return state, false, "Room is full!"
 	}
-	deck_code := ""
-	if val, exists := metadata["deck_code"]; exists {
-		deck_code = val
-	}
 	instances := ""
 	if ival, exists := metadata["instances"]; exists {
 		instances = ival
 	}
-	mState.Players[presence.GetUserId()] = NewPlayerState(presence, deck_code, &instances, logger)
+	mState.Players[presence.GetUserId()] = NewPlayerState(presence, instances, logger)
 	logger.Warn("%s", mState.Players[presence.GetUserId()].Data.Deck)
 	return state, true, fmt.Sprintf("%+v", mState.Players[presence.GetUserId()].Data.Deck)
 }
@@ -94,7 +89,7 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 		if exists {
 			continue
 		}
-		mState.Players[p.GetUserId()] = NewPlayerState(p, "", nil, logger)
+		mState.Players[p.GetUserId()] = NewPlayerState(p, "", logger)
 	}
 
 	return mState
@@ -127,14 +122,14 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	for _, message := range messages {
 		mState = DecodeOpCode(mState, &logger, &dispatcher, message)
 	}
+	if mState.Loser != nil {
+		dispatcher.BroadcastMessage(int64(EndMatch), []byte(*mState.Loser), nil, nil, true)
+		return nil
+	}
 	return mState
 }
 
 func (m *Match) MatchTerminate(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, graceSeconds int) interface{} {
-	message := "Server shutting down in " + strconv.Itoa(graceSeconds) + " seconds."
-	reliable := true
-	dispatcher.BroadcastMessage(2, []byte(message), []runtime.Presence{}, nil, reliable)
-
 	return state
 }
 

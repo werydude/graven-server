@@ -30,9 +30,23 @@ func (e *DeckEncodeError) Error() string {
 	return fmt.Sprintf("%s - %s", e.Err, e.Message)
 }
 
+func DecodeInstances(instances string, logger runtime.Logger) []InstanceCard {
+	cards := make([]InstanceCard, 0, DECK_SIZE)
+	pairs := strings.Split(instances, "|")
+	for _, pair := range pairs {
+		split := strings.Split(pair, "@")
+		instance_id, _ := strconv.Atoi(split[1])
+		cards = append(cards, InstanceCard{
+			CardId(split[0]),
+			instance_id,
+		})
+	}
+	return cards
+}
+
 func DecodeDeckCode(deck_code string, instances_ptr *string, logger runtime.Logger) ([]InstanceCard, DeckDecodeError) {
 
-	cards := make([]InstanceCard, DECK_SIZE)[:0] // Set capacity=DECK_SIZE and length=0
+	cards := make([]InstanceCard, 0, DECK_SIZE)
 
 	sDec, err := b64.StdEncoding.DecodeString(deck_code)
 	if err != nil {
