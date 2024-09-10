@@ -15,11 +15,12 @@ const (
 	Playing
 	Draw
 	Move
+	Reveal
 	EndMatch
 )
 
 func DecodeOpCode(mState *MatchState, logger *runtime.Logger, dispatcher *runtime.MatchDispatcher, message runtime.MatchData) *MatchState {
-	(*logger).Info("Received %v from %v (OpCode: %v, need: %v)", string(message.GetData()), message.GetUserId(), message.GetOpCode(), Ready)
+	(*logger).Info("Received %v from %v (OpCode: %v", string(message.GetData()), message.GetUserId(), message.GetOpCode())
 	switch OpCode(message.GetOpCode()) {
 	case Connected:
 		(*logger).Warn("Connected OPCODE")
@@ -36,6 +37,9 @@ func DecodeOpCode(mState *MatchState, logger *runtime.Logger, dispatcher *runtim
 	case Move:
 		(*logger).Warn("Running OnMove")
 		mState = OnMove(mState, &message, logger, dispatcher, message.GetData())
+
+	case Reveal:
+		mState = OnReveal(mState, &message, logger, dispatcher, message.GetData())
 	}
 	return mState
 }
@@ -141,7 +145,7 @@ func OnMove(mState *MatchState, message_ptr *runtime.MatchData, logger *runtime.
 		if msg.B != nil {
 			(*logger).Warn("unmarshal Success! (%+v, %+v, %+v)", msg.A, *msg.B, msg.Card)
 		} else {
-			(*logger).Warn("unmarshal Success! (%+v, NIL, %+v)", msg.A, msg.Card)
+			(*logger).Warn("unmarshal Success! (%+v, NIL, %+v)", msg.A)
 		}
 	}
 
@@ -177,4 +181,22 @@ func OnMove(mState *MatchState, message_ptr *runtime.MatchData, logger *runtime.
 
 	return mState
 
+}
+
+func OnReveal(mState *MatchState, message_ptr *runtime.MatchData, logger *runtime.Logger, dispatcher *runtime.MatchDispatcher, data []byte) *MatchState {
+	message := *message_ptr
+	player := mState.Players[message.GetUserId()]
+	var reveal = string(data) == "true"
+	reveal_data := RevealData{
+		InstanceCards: player.Data.Hand.Contents,
+		Reveal:        reveal,
+	}
+	if enc_data, err := json.Marshal(reveal_data); err == nil {
+		(*dispatcher).BroadcastMessage(int64(Reveal), enc_data, nil, player.Presence, true)
+		(*logger).Warn("broadcasted!")
+	} else {
+		(*logger).Error("%s", err)
+	}
+
+	return mState
 }
