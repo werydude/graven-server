@@ -13,18 +13,18 @@ const DECK_SIZE uint8 = 32
 const MAX_PLAYERS uint8 = 2
 
 type PlayerState struct {
-	Presence runtime.Presence
-	Data     FieldData
-	State    OpCode
+	Presence runtime.Presence `json:"presence"`
+	Data     FieldData        `json:"data"`
+	State    OpCode           `json:"opcode"`
 }
 
 func NewPlayerState(p_presence runtime.Presence, p_instances string, logger runtime.Logger) PlayerState {
-	deck := cards.DecodeInstances(p_instances, logger)
+	deck := Zone{Contents: cards.DecodeInstances(p_instances, logger)}
 
-	grave := make([]cards.InstanceCard, 0, DECK_SIZE)
-	hand := make([]cards.InstanceCard, 0, DECK_SIZE)
-	survey := make([]cards.InstanceCard, 0, DECK_SIZE)
-	effect := make([]cards.InstanceCard, 0, DECK_SIZE)
+	grave := NewZone(DECK_SIZE)
+	hand := NewZone(DECK_SIZE)
+	survey := NewZone(DECK_SIZE)
+	effect := NewZone(DECK_SIZE)
 
 	return PlayerState{
 		p_presence,
@@ -48,6 +48,12 @@ type DeckCounter struct {
 type MatchState struct {
 	Players map[string]PlayerState `json:"players"`
 	Loser   *string
+}
+
+func (m_state MatchState) GetPlayerFieldData(player_string string, logger *runtime.Logger) (*FieldData, error) {
+	var player = m_state.Players[player_string]
+	// TODO: Error handle
+	return &player.Data, nil
 }
 
 type Match struct{}
@@ -76,8 +82,17 @@ func (m *Match) MatchJoinAttempt(ctx context.Context, logger runtime.Logger, db 
 	if ival, exists := metadata["instances"]; exists {
 		instances = ival
 	}
+
 	mState.Players[presence.GetUserId()] = NewPlayerState(presence, instances, logger)
-	logger.Warn("%s", mState.Players[presence.GetUserId()].Data.Deck)
+	// player_presences := make([]runtime.Presence, 0, len(mState.Players))
+	//
+	// for player := range mState.Players {
+	// 	player_presences = append(player_presences, mState.Players[player].Presence)
+	// }
+	//
+	// dispatcher.BroadcastMessage(int64(Connected), make([]byte, 0, 0), nil, presence, true)
+
+	logger.Warn("BROADCASTED JOIN (%+v)", presence)
 	return state, true, fmt.Sprintf("%+v", mState.Players[presence.GetUserId()].Data.Deck)
 }
 
